@@ -1,0 +1,16 @@
+name: another_telephony
+description: Incoming-only MIT fork of another_telephony for Qorgan.
+version: 0.4.1+qorgan.1
+publish_to: none
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+  flutter: '>=3.47.0'
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.shounakmulay.telephony
+        pluginClass: TelephonyPlugin

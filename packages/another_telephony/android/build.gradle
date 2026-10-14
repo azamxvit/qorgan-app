@@ -1,0 +1,13 @@
+group 'com.shounakmulay.telephony'
+version '0.4.1-qorgan'
+apply plugin: 'com.android.library'
+android {
+    namespace 'com.shounakmulay.telephony'
+    compileSdk 36
+    defaultConfig { minSdk 24 }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+dependencies { implementation 'androidx.annotation:annotation:1.9.1' }
