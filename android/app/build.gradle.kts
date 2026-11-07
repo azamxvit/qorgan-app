@@ -1,7 +1,48 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val uploadProperties = Properties()
+val uploadPropertiesFile = rootProject.file("key.properties")
+if (uploadPropertiesFile.exists()) {
+    uploadPropertiesFile.inputStream().use { uploadProperties.load(it) }
+}
+fun uploadValue(property: String, environment: String): String? =
+    System.getenv(environment)?.takeIf { it.isNotBlank() }
+        ?: uploadProperties.getProperty(property)?.takeIf { it.isNotBlank() }
+
+val uploadStore = uploadValue("storeFile", "QORGAN_KEYSTORE_PATH")
+val uploadAlias = uploadValue("keyAlias", "QORGAN_KEY_ALIAS")
+val uploadStorePassword = uploadValue("storePassword", "QORGAN_KEYSTORE_PASSWORD")
+val uploadKeyPassword = uploadValue("keyPassword", "QORGAN_KEY_PASSWORD")
+// Only the CI APK smoke job may explicitly opt into a disposable debug key.
+// App bundles never accept this option, even if a real upload key is present.
+val smokeSigning = providers.gradleProperty("qorganSmokeSigning").orNull == "true"
+
+gradle.taskGraph.whenReady {
+    val appReleaseTasks = allTasks.filter {
+        it.project.path == ":app" && it.name.contains("Release", ignoreCase = true)
+    }
+    val buildsAppBundle = allTasks.any {
+        it.project.path == ":app" &&
+            (it.name.matches(Regex("bundle(Debug|Profile|Release)")) ||
+                it.name.matches(Regex("(sign|package)(Debug|Profile|Release)Bundle")))
+    }
+    if (smokeSigning && buildsAppBundle) {
+        throw GradleException("Smoke signing is APK-only. A Play App Bundle requires the private upload key.")
+    }
+    if (appReleaseTasks.isNotEmpty() && !smokeSigning &&
+        (uploadStore == null || uploadAlias == null || uploadStorePassword == null ||
+            uploadKeyPassword == null || !rootProject.file(uploadStore).isFile)) {
+        throw GradleException(
+            "Release signing is not configured. Use android/key.properties or QORGAN_KEYSTORE_* " +
+                "environment variables; see docs/google-play/build-and-upload.md. Debug signing is never implicit."
+        )
+    }
 }
 
 android {
@@ -16,7 +57,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "kz.qorgan.qorgan_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -30,11 +70,18 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (uploadStore != null) storeFile = rootProject.file(uploadStore)
+            keyAlias = uploadAlias
+            storePassword = uploadStorePassword
+            keyPassword = uploadKeyPassword
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (smokeSigning) "debug" else "release")
         }
     }
 }

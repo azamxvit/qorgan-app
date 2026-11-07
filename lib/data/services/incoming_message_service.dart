@@ -6,7 +6,15 @@ import 'message_store.dart';
 abstract class IncomingMessageService {
   void Function()? onOpenMessage;
   Future<ProtectionAccess> status() async => const ProtectionAccess();
-  Future<ProtectionAccess> requestAccess() async => status();
+  Future<ProtectionAccess> requestSmsAccess() async => status();
+  Future<ProtectionAccess> requestNotificationAccess() async => status();
+  Future<ProtectionAccess> requestAccess() async {
+    final access = await requestSmsAccess();
+    if (!access.supported || !access.sms) return access;
+    return access.notifications ? access : requestNotificationAccess();
+  }
+
+  bool get hasNotificationSelection => false;
   Future<StoredMessage?> latest() async => null;
   Future<StoredMessage?> openedMessage() async => null;
   Future<List<StoredMessage>> recent() async {
@@ -15,6 +23,11 @@ abstract class IncomingMessageService {
   }
 
   Future<void> openSettings() async {}
+  Future<void> clearHistory() async {}
+  Future<void> recordFeedback(String key, MessageFeedback feedback) async =>
+      throw UnsupportedError(
+        'Message feedback is unavailable on this platform.',
+      );
   void listen(void Function(String text) onMessage);
   void dispose();
 }

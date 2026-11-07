@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:qorgan_app/data/repositories/protection_repository.dart';
 import 'package:qorgan_app/data/services/incoming_message_service.dart';
 import 'package:qorgan_app/ui/qorgan_app.dart';
+import 'package:qorgan_app/data/services/onboarding_settings.dart';
 
 void main() {
   testWidgets('opens on background protection without a remote module', (
@@ -9,6 +10,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       QorganApp(
+        onboarding: MemoryOnboardingSettings(completed: true),
         repository: ProtectionRepository(),
         incomingMessages: UnboundIncomingMessageService(),
       ),

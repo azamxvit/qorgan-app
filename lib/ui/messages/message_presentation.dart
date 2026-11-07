@@ -1,19 +1,24 @@
 import '../../data/services/message_store.dart';
 import '../../domain/models/message_verdict.dart';
 
-const signalWeights = {
-  MessageSignal.bank: 1,
-  MessageSignal.urgency: 2,
-  MessageSignal.pressure: 2,
-  MessageSignal.secret: 3,
-  MessageSignal.unofficialLink: 3,
+export '../../domain/inspect_message.dart' show signalWeights;
+
+String riskLabel(MessageRisk risk) => switch (risk) {
+  MessageRisk.clear => 'Низкий риск',
+  MessageRisk.watch => 'Стоит проверить',
+  MessageRisk.warn => 'Подозрительное SMS',
 };
+
 const signalNames = {
   MessageSignal.bank: 'Банк',
   MessageSignal.urgency: 'Срочность',
   MessageSignal.pressure: 'Давление',
   MessageSignal.secret: 'Код',
   MessageSignal.unofficialLink: 'Ссылка',
+  MessageSignal.impersonation: 'Отправитель',
+  MessageSignal.prize: 'Выигрыш',
+  MessageSignal.payment: 'Оплата',
+  MessageSignal.blockedHost: 'Известный фишинг',
 };
 const signalReasons = {
   MessageSignal.bank: 'Сообщение ссылается на банк',
@@ -21,28 +26,50 @@ const signalReasons = {
   MessageSignal.pressure: 'Угрожают ограничить доступ',
   MessageSignal.secret: 'Просят код или подтверждение',
   MessageSignal.unofficialLink: 'Ссылка ведёт на другой сайт',
+  MessageSignal.impersonation: 'Пишут от имени банка с обычного номера',
+  MessageSignal.prize: 'Обещают приз или выплату',
+  MessageSignal.payment: 'Просят заплатить или перевести',
+  MessageSignal.blockedHost: 'Этот адрес уже отмечен как фишинговый',
 };
 
+/// Signals the screens list even when they did not fire, so the table keeps a
+/// stable shape.
+const _baselineRows = [
+  MessageSignal.bank,
+  MessageSignal.urgency,
+  MessageSignal.pressure,
+  MessageSignal.unofficialLink,
+];
+
+/// Rows for the signal screens: the baseline plus anything else the rule
+/// found, so a warning is never shown without the reason behind it.
+List<MessageSignal> signalRows(MessageVerdict verdict) => [
+  for (final signal in MessageSignal.values)
+    if (_baselineRows.contains(signal) || verdict.signals.contains(signal))
+      signal,
+];
+
+/// The sender exactly as Android reported it. Mapping a sender to a bank name
+/// would be a guess, and a guess here reads to the user as verification.
 String senderName(StoredMessage record) {
   final sender = record.message.sender.trim();
-  if (sender.toLowerCase().contains('kaspi')) return 'Kaspi Bank';
-  if (sender.toLowerCase().contains('halyk')) return 'Halyk Bank';
-  if (sender.isEmpty) return 'Неизвестный отправитель';
-  return sender;
+  return sender.isEmpty ? 'Неизвестный отправитель' : sender;
 }
 
+/// Derived only from what the rule found. Reading the body for words like
+/// "поступление" let a phishing message title itself as a normal transfer.
 String messageTitle(StoredMessage record) {
-  final text = record.message.body.toLowerCase();
-  if (text.contains('поступ')) return 'Поступление на счёт';
-  if (record.verdict.signals.contains(MessageSignal.secret)) {
-    return 'Подтвердите доступ';
+  final signals = record.verdict.signals;
+  if (signals.contains(MessageSignal.impersonation)) {
+    return 'Пишут от имени банка';
   }
-  if (record.verdict.signals.contains(MessageSignal.pressure)) {
-    return 'Ограничение по счёту';
-  }
-  if (record.verdict.signals.contains(MessageSignal.unofficialLink)) {
+  if (signals.contains(MessageSignal.secret)) return 'Просят код';
+  if (signals.contains(MessageSignal.pressure)) return 'Ограничение по счёту';
+  if (signals.contains(MessageSignal.unofficialLink)) {
     return 'Ссылка в сообщении';
   }
+  if (signals.contains(MessageSignal.prize)) return 'Обещают выигрыш';
+  if (signals.contains(MessageSignal.payment)) return 'Просят оплатить';
   return 'Новое сообщение';
 }
 

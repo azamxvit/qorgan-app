@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/models/message_verdict.dart';
 import 'colors.dart';
+import '../launch/brand_mark.dart';
+import '../messages/message_presentation.dart';
+
+export 'qorgan_bottom_bar.dart';
 
 class SurfaceCard extends StatelessWidget {
   const SurfaceCard({
@@ -46,7 +51,7 @@ class RoundAction extends StatelessWidget {
     style: IconButton.styleFrom(
       backgroundColor: QorganColors.surface,
       foregroundColor: QorganColors.muted,
-      fixedSize: const Size(44, 44),
+      fixedSize: const Size(48, 48),
       padding: EdgeInsets.zero,
     ),
   );
@@ -81,29 +86,45 @@ class SmsHeader extends StatelessWidget {
     required this.onBack,
     required this.onMenu,
     required this.onProfile,
+    this.root = false,
     super.key,
   });
   final VoidCallback onBack;
   final VoidCallback onMenu;
   final VoidCallback onProfile;
+  final bool root;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
     child: Row(
       children: [
-        RoundAction(
-          label: 'Назад',
-          onTap: onBack,
-          child: const Icon(Icons.arrow_back_rounded, size: 20),
+        if (!root) ...[
+          RoundAction(
+            label: 'Назад',
+            onTap: onBack,
+            child: const Icon(Icons.arrow_back_rounded),
+          ),
+          const SizedBox(width: 12),
+        ] else ...[
+          const BrandMark(size: 28),
+          const SizedBox(width: 10),
+        ],
+        const Expanded(
+          child: Text(
+            'Qorğan',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -.6,
+            ),
+          ),
         ),
-        const Spacer(),
-        RoundAction(label: 'Меню', onTap: onMenu, child: const FourDots()),
-        const SizedBox(width: 10),
-        RoundAction(
-          label: 'Настройки защиты',
-          onTap: onProfile,
-          child: const Icon(Icons.person_outline_rounded, size: 21),
-        ),
+        if (root)
+          RoundAction(
+            label: 'Настройки',
+            onTap: onProfile,
+            child: const Icon(Icons.settings_outlined),
+          ),
       ],
     ),
   );
@@ -139,16 +160,31 @@ class SenderAvatar extends StatelessWidget {
 
 class StatusPill extends StatelessWidget {
   const StatusPill({
-    required this.suspicious,
+    required this.risk,
     this.label,
     this.check = false,
     this.compact = false,
     super.key,
   });
-  final bool suspicious;
+  final MessageRisk risk;
   final String? label;
   final bool check;
   final bool compact;
+
+  Color get _fill => switch (risk) {
+    MessageRisk.warn => QorganColors.dark,
+    MessageRisk.watch => QorganColors.backdrop,
+    MessageRisk.clear => QorganColors.pale,
+  };
+
+  Color get _ink => switch (risk) {
+    MessageRisk.warn => QorganColors.surface,
+    MessageRisk.clear => QorganColors.ink,
+    MessageRisk.watch => QorganColors.mintInk,
+  };
+
+  String get _label => riskLabel(risk);
+
   @override
   Widget build(BuildContext context) => Container(
     padding: EdgeInsets.symmetric(
@@ -156,22 +192,30 @@ class StatusPill extends StatelessWidget {
       vertical: compact ? 6 : 8,
     ),
     decoration: BoxDecoration(
-      color: suspicious ? QorganColors.mint : QorganColors.pale,
+      color: _fill,
       borderRadius: BorderRadius.circular(40),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (check) ...[
-          const Icon(Icons.check_rounded, size: 12, color: QorganColors.muted),
-          const SizedBox(width: 4),
-        ],
-        Text(
-          label ?? (suspicious ? 'Подозрительно' : 'Можно пропустить'),
-          style: TextStyle(
-            fontSize: compact ? 10 : 11,
-            color: suspicious ? QorganColors.mintInk : QorganColors.muted,
-            fontWeight: FontWeight.w500,
+        Icon(
+          switch (risk) {
+            MessageRisk.clear => Icons.check_rounded,
+            MessageRisk.watch => Icons.info_outline_rounded,
+            MessageRisk.warn => Icons.warning_amber_rounded,
+          },
+          size: 16,
+          color: _ink,
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label ?? _label,
+            style: TextStyle(
+              fontSize: compact ? 11 : 12,
+              color: _ink,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
@@ -200,8 +244,9 @@ class CardHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Text(title, style: Theme.of(context).textTheme.titleSmall),
-      const Spacer(),
+      Expanded(
+        child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+      ),
       ?trailing,
     ],
   );
@@ -234,87 +279,5 @@ class PhonePage extends StatelessWidget {
       ),
     ),
     bottomNavigationBar: bottom,
-  );
-}
-
-class QorganBottomBar extends StatelessWidget {
-  const QorganBottomBar({required this.onSms, super.key});
-  final VoidCallback onSms;
-  @override
-  Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      color: QorganColors.surface,
-      border: Border(top: BorderSide(color: QorganColors.line)),
-    ),
-    child: SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: QorganColors.mint.withValues(alpha: .16),
-                  borderRadius: BorderRadius.circular(40),
-                ),
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.shield_outlined,
-                      size: 21,
-                      color: QorganColors.mintInk,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Защита',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: QorganColors.mintInk,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: InkWell(
-                onTap: onSms,
-                borderRadius: BorderRadius.circular(40),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.sms_outlined,
-                        size: 21,
-                        color: QorganColors.muted,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'SMS',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: QorganColors.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
   );
 }

@@ -1,248 +1,140 @@
 import 'package:flutter/material.dart';
 
 import '../../data/services/message_store.dart';
-import '../core/colors.dart';
 import '../core/light_components.dart';
 import 'message_presentation.dart';
-import '../../domain/models/message_verdict.dart';
+import 'sms_result_content.dart';
 
-class SmsDetailPage extends StatelessWidget {
+class SmsDetailPage extends StatefulWidget {
   const SmsDetailPage({
     required this.record,
     required this.header,
     required this.onSignals,
+    this.onFeedback,
     super.key,
   });
   final StoredMessage record;
   final SmsHeader header;
   final VoidCallback onSignals;
+  final Future<void> Function(MessageFeedback)? onFeedback;
+
   @override
-  Widget build(BuildContext context) {
-    final signals = record.verdict.signals;
-    return PhonePage(
-      header: header,
-      children: [
-        Text(
-          '${senderName(record)}\n${messageTitle(record)}',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            SenderAvatar(name: senderName(record)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                senderName(record),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
+  State<SmsDetailPage> createState() => _SmsDetailPageState();
+}
+
+class _SmsDetailPageState extends State<SmsDetailPage> {
+  late MessageFeedback _feedback = widget.record.feedback;
+  bool _savingFeedback = false;
+  String? _feedbackError;
+
+  @override
+  void didUpdateWidget(covariant SmsDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.record.key != widget.record.key ||
+        oldWidget.record.feedback != widget.record.feedback) {
+      _feedback = widget.record.feedback;
+      _feedbackError = null;
+    }
+  }
+
+  Future<void> _saveFeedback(MessageFeedback value) async {
+    if (_savingFeedback || widget.onFeedback == null) return;
+    final messageKey = widget.record.key;
+    setState(() {
+      _savingFeedback = true;
+      _feedbackError = null;
+    });
+    try {
+      await widget.onFeedback!(value);
+      if (mounted && widget.record.key == messageKey) {
+        setState(() => _feedback = value);
+      }
+    } catch (_) {
+      if (mounted && widget.record.key == messageKey) {
+        setState(
+          () => _feedbackError =
+              'Не удалось сохранить отметку. Попробуйте ещё раз.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingFeedback = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PhonePage(
+    header: widget.header,
+    children: [
+      Text(
+        senderName(widget.record),
+        style: Theme.of(context).textTheme.headlineMedium,
+      ),
+      const SizedBox(height: 8),
+      Text(
+        shortDate(widget.record.message.timestamp),
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+      const SizedBox(height: 20),
+      SmsResultContent(
+        text: widget.record.message.body,
+        verdict: widget.record.verdict,
+        onSignals: widget.onSignals,
+      ),
+      if (_feedback != MessageFeedback.none || widget.onFeedback != null) ...[
+        const SizedBox(height: 16),
         SurfaceCard(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CardHeading(
-                title: 'Оценка',
-                trailing: IconButton(
-                  tooltip: 'Открыть признаки',
-                  onPressed: onSignals,
-                  icon: const Icon(
-                    Icons.more_horiz,
-                    size: 18,
-                    color: QorganColors.muted,
-                  ),
-                  constraints: const BoxConstraints.tightFor(
-                    width: 24,
-                    height: 24,
-                  ),
-                  padding: EdgeInsets.zero,
-                ),
+              Text(
+                'Ваша оценка сообщения',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(40),
-                  gradient: const LinearGradient(
-                    colors: [QorganColors.mint, QorganColors.signal],
-                  ),
-                ),
-                child: Text(
-                  '${record.verdict.block ? 'Подозрительно' : 'Можно пропустить'} · ${record.verdict.score}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: QorganColors.mintInk,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _Metric(
-                      label: 'Банк',
-                      value: signals.contains(MessageSignal.bank)
-                          ? senderName(record)
-                          : 'Не указан',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _Metric(
-                      label: 'Срочность',
-                      value: signals.contains(MessageSignal.urgency)
-                          ? 'Есть'
-                          : 'Нет',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _Metric(
-                      label: 'Давление',
-                      value: signals.contains(MessageSignal.pressure)
-                          ? 'Есть'
-                          : 'Нет',
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _Metric(
-                      label: 'Ссылка',
-                      value: signals.contains(MessageSignal.unofficialLink)
-                          ? 'Не официальный сайт'
-                          : 'Чужих ссылок нет',
-                      accent: signals.contains(MessageSignal.unofficialLink),
-                    ),
-                  ),
-                ],
-              ),
-              if (signals.contains(MessageSignal.secret)) ...[
-                const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              if (_feedback != MessageFeedback.none)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(switch (_feedback) {
+                    MessageFeedback.wrong =>
+                      'Вы отметили: это не мошенничество',
+                    MessageFeedback.fraud => 'Вы отметили: это мошенничество',
+                    MessageFeedback.none => '',
+                  }),
+                )
+              else ...[
                 Text(
-                  'Код или подтверждение · +3',
+                  'Отметка сохраняется на устройстве.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: _savingFeedback
+                      ? null
+                      : () => _saveFeedback(MessageFeedback.wrong),
+                  child: const Text(
+                    'Это не мошенничество',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: _savingFeedback
+                      ? null
+                      : () => _saveFeedback(MessageFeedback.fraud),
+                  child: const Text(
+                    'Это мошенничество',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                if (_feedbackError != null) ...[
+                  const SizedBox(height: 12),
+                  Semantics(liveRegion: true, child: Text(_feedbackError!)),
+                ],
               ],
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        InkWell(
-          key: const ValueKey('open-signals'),
-          onTap: onSignals,
-          borderRadius: BorderRadius.circular(20),
-          child: SurfaceCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const CardHeading(
-                  title: 'Признаки',
-                  trailing: Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: QorganColors.muted,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                if (signals.isEmpty)
-                  Text(
-                    'Подозрительных признаков не найдено',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                for (final signal in signals)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(top: 7),
-                          child: MintDot(size: 5),
-                        ),
-                        const SizedBox(width: 9),
-                        Expanded(
-                          child: Text(
-                            signalReasons[signal]!,
-                            style: const TextStyle(fontSize: 12, height: 1.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          record.verdict.block
-              ? 'Не открывайте ссылку. Проверьте в официальном приложении банка'
-              : 'Признаков фишинга по нашему правилу нет',
-          style: const TextStyle(
-            fontSize: 12,
-            height: 1.5,
-            color: QorganColors.muted,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: const EdgeInsets.only(bottom: 12),
-          title: const Text(
-            'Текст SMS',
-            style: TextStyle(fontSize: 12, color: QorganColors.muted),
-          ),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SelectableText(
-                record.message.body,
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          ],
-        ),
       ],
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.label,
-    required this.value,
-    this.accent = false,
-  });
-  final String label;
-  final String value;
-  final bool accent;
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: Theme.of(context).textTheme.bodySmall),
-      const SizedBox(height: 5),
-      Text(
-        value,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: accent ? QorganColors.mint : QorganColors.ink,
-          height: 1.4,
-        ),
-      ),
     ],
   );
 }

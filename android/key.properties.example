@@ -1,0 +1,6 @@
+# Copy to key.properties (ignored by Git), then supply PRIVATE upload-key values.
+# Use an absolute path. Never use the Android debug keystore for a Play release.
+storeFile=/absolute/path/to/upload-keystore.jks
+storePassword=
+keyAlias=upload
+keyPassword=

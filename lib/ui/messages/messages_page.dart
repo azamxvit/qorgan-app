@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../data/services/message_store.dart';
+import '../../domain/models/message_verdict.dart';
 import '../core/colors.dart';
 import '../core/light_components.dart';
 import 'message_presentation.dart';
 
-enum SmsFilter { all, suspicious, normal }
+enum SmsFilter { all, suspicious, watch, normal }
 
 class MessagesPage extends StatefulWidget {
   const MessagesPage({
@@ -13,74 +14,72 @@ class MessagesPage extends StatefulWidget {
     required this.header,
     required this.onMessage,
     required this.onManual,
+    this.historyError,
+    this.onRetry,
     super.key,
   });
   final List<StoredMessage> messages;
   final SmsHeader header;
   final ValueChanged<StoredMessage> onMessage;
   final VoidCallback onManual;
+  final String? historyError;
+  final VoidCallback? onRetry;
   @override
   State<MessagesPage> createState() => _MessagesPageState();
 }
 
 class _MessagesPageState extends State<MessagesPage> {
   var filter = SmsFilter.all;
+
   @override
   Widget build(BuildContext context) {
     final visible = widget.messages
         .where(
-          (record) =>
-              filter == SmsFilter.all ||
-              (filter == SmsFilter.suspicious
-                  ? record.verdict.block
-                  : !record.verdict.block),
+          (record) => switch (filter) {
+            SmsFilter.all => true,
+            SmsFilter.suspicious => record.verdict.risk == MessageRisk.warn,
+            SmsFilter.watch => record.verdict.risk == MessageRisk.watch,
+            SmsFilter.normal => record.verdict.risk == MessageRisk.clear,
+          },
         )
         .toList();
     return PhonePage(
       header: widget.header,
       children: [
         Text('Сообщения', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 22),
+        const SizedBox(height: 8),
+        Text(
+          'Последние 100 входящих SMS. Ручные проверки сюда не добавляются.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 20),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
               for (final item in SmsFilter.values)
                 Padding(
-                  padding: const EdgeInsets.only(right: 7),
-                  child: InkWell(
-                    key: ValueKey('filter-${item.name}'),
-                    onTap: () => setState(() => filter = item),
-                    borderRadius: BorderRadius.circular(40),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: filter == item
-                            ? QorganColors.mint
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Semantics(
+                    selected: filter == item,
+                    child: OutlinedButton(
+                      key: ValueKey('filter-${item.name}'),
+                      onPressed: () => setState(() => filter = item),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: filter == item
+                            ? QorganColors.mintInk
+                            : QorganColors.ink,
+                        backgroundColor: filter == item
+                            ? QorganColors.backdrop
                             : QorganColors.surface,
-                        borderRadius: BorderRadius.circular(40),
-                        border: Border.all(
-                          color: filter == item
-                              ? QorganColors.mint
-                              : QorganColors.line,
-                        ),
+                        minimumSize: const Size(48, 48),
                       ),
-                      child: Text(
-                        switch (item) {
-                          SmsFilter.all => 'Все',
-                          SmsFilter.suspicious => 'Подозрительные',
-                          SmsFilter.normal => 'Обычные',
-                        },
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: filter == item
-                              ? QorganColors.mintInk
-                              : QorganColors.muted,
-                        ),
-                      ),
+                      child: Text(switch (item) {
+                        SmsFilter.all => 'Все',
+                        SmsFilter.suspicious => 'Подозрительные',
+                        SmsFilter.watch => 'Стоит проверить',
+                        SmsFilter.normal => 'Низкий риск',
+                      }),
                     ),
                   ),
                 ),
@@ -88,78 +87,95 @@ class _MessagesPageState extends State<MessagesPage> {
           ),
         ),
         const SizedBox(height: 20),
-        if (visible.isEmpty)
+        if (widget.historyError != null)
           SurfaceCard(
-            child: Text(
-              'Сообщений пока нет',
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Не удалось загрузить сообщения',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Попробуйте ещё раз. Ручная проверка остаётся доступной.',
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: widget.onRetry,
+                  child: const Text('Повторить'),
+                ),
+              ],
+            ),
+          )
+        else if (widget.messages.isEmpty)
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Входящих SMS пока нет',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'После настройки защиты здесь появятся новые полученные SMS. Старую переписку Qorğan не загружает.',
+                ),
+              ],
+            ),
+          )
+        else if (visible.isEmpty)
+          SurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Сообщений с такой оценкой нет'),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => setState(() => filter = SmsFilter.all),
+                  child: const Text('Показать все'),
+                ),
+              ],
             ),
           ),
-        for (final record in visible)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: InkWell(
-              onTap: () => widget.onMessage(record),
-              borderRadius: BorderRadius.circular(20),
-              child: SurfaceCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${senderName(record)}\n${messageTitle(record)}',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                        letterSpacing: -.4,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
+        if (widget.historyError == null)
+          for (final record in visible)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Semantics(
+                button: true,
+                child: InkWell(
+                  key: ValueKey('message-${record.key}'),
+                  onTap: () => widget.onMessage(record),
+                  borderRadius: BorderRadius.circular(20),
+                  child: SurfaceCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SenderAvatar(name: senderName(record), size: 30),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            senderName(record),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: QorganColors.muted,
-                            ),
-                          ),
+                        Text(
+                          senderName(record),
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        StatusPill(
-                          suspicious: record.verdict.block,
-                          label: record.verdict.block
-                              ? 'Подозрительно'
-                              : record.verdict.score > 1
-                              ? 'Проверить'
-                              : 'Пропущено',
-                          check:
-                              !record.verdict.block &&
-                              record.verdict.score <= 1,
-                          compact: true,
+                        const SizedBox(height: 6),
+                        Text(
+                          shortDate(record.message.timestamp),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        const SizedBox(height: 12),
+                        Text(messageTitle(record)),
+                        const SizedBox(height: 14),
+                        StatusPill(risk: record.verdict.risk),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      shortDate(record.message.timestamp),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: QorganColors.muted,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
         OutlinedButton.icon(
           onPressed: widget.onManual,
-          icon: const Icon(Icons.edit_outlined, size: 15),
-          label: const Text('Проверить текст SMS'),
+          icon: const Icon(Icons.edit_outlined, size: 18),
+          label: const Text('Проверить SMS вручную'),
         ),
       ],
     );

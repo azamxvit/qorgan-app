@@ -1,0 +1,87 @@
+{
+  "package": "kz.qorgan.qorgan_app",
+  "version_name": "1.0.0",
+  "version_code": "1",
+  "min_sdk": 24,
+  "target_sdk": 36,
+  "permissions": [
+    "android.permission.INTERNET",
+    "android.permission.POST_NOTIFICATIONS",
+    "android.permission.RECEIVE_SMS",
+    "android.permission.VIBRATE",
+    "kz.qorgan.qorgan_app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+  ],
+  "upload_certificate_sha256": "91cf5b397c2868cb9e5a81f17ccf4cc16ad68a87d6495451073ab5cc17b74855",
+  "bundletool_version": "1.18.3",
+  "bundle_valid": true,
+  "aab_signature_valid": true,
+  "apk_signature_matches": true,
+  "apk_identity_matches": true,
+  "apk_zip_alignment_16kb": true,
+  "bundle_native_alignment_16kb": true,
+  "native_libraries": [
+    {
+      "file": "base/lib/arm64-v8a/libapp.so",
+      "load_segment_alignment": [
+        65536,
+        65536,
+        65536
+      ]
+    },
+    {
+      "file": "base/lib/arm64-v8a/libdatastore_shared_counter.so",
+      "load_segment_alignment": [
+        16384,
+        16384,
+        16384
+      ]
+    },
+    {
+      "file": "base/lib/arm64-v8a/libflutter.so",
+      "load_segment_alignment": [
+        65536,
+        65536,
+        65536
+      ]
+    },
+    {
+      "file": "base/lib/x86_64/libapp.so",
+      "load_segment_alignment": [
+        65536,
+        65536,
+        65536
+      ]
+    },
+    {
+      "file": "base/lib/x86_64/libdatastore_shared_counter.so",
+      "load_segment_alignment": [
+        16384,
+        16384
+      ]
+    },
+    {
+      "file": "base/lib/x86_64/libflutter.so",
+      "load_segment_alignment": [
+        65536,
+        65536,
+        65536
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "artifacts/play-release/qorgan-1.0.0-1.aab",
+      "bytes": 53027634,
+      "sha256": "18585e324504466d737f0df217c9708bd77dd9589a40c771d58c78f29728784a"
+    },
+    {
+      "file": "artifacts/play-release/qorgan-1.0.0-1.apk",
+      "bytes": 53921960,
+      "sha256": "85b46015e567542e60f6ea5a5ad354ae6334dbe9a478cc2186e3e1244849e2ff"
+    }
+  ],
+  "limitations": [
+    "Static package checks only; not a real-device or 16 KB runtime test.",
+    "Not Google Play permission approval or production access."
+  ]
+}

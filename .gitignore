@@ -49,3 +49,25 @@ app.*.map.json
 
 # Downloadable test builds; source and validation notes stay in Git.
 /artifacts/*.apk
+/artifacts/*.aab
+/artifacts/play-release/
+
+# Signing material must never enter source control, regardless of its folder.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.password
+key.properties
+
+# Local credentials and private operator notes.
+.env
+.env.*
+!.env.example
+!.env.*.example
+.secrets/
+.local/
+gha-creds-*.json
+service-account.json
+*-service-account.json
+*.key

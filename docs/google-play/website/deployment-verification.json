@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-07",
+  "url": "https://qorgan-web.vercel.app/privacy",
+  "next_version": "16.4.5",
+  "anonymous_policy_http_status": 200,
+  "anonymous_home_http_status": 200,
+  "policy_languages": [
+    "ru",
+    "en"
+  ],
+  "developer": "Azamat",
+  "support": "omirtayazamatt@gmail.com",
+  "staged_page_sha256": "37b30882c398e101c2148bb19fd053472e6f7b770dd10ae25fe50be821816187",
+  "validation": [
+    "npm run lint passed",
+    "npm run build passed; static /privacy route generated",
+    "npm audit --omit=dev: 0 vulnerabilities",
+    "anonymous policy rendered text verified; home links to /privacy"
+  ],
+  "scope": "Public privacy route and footer, with the Next.js security update; verification applies to the published website."
+}

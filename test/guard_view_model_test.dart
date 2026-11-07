@@ -6,7 +6,9 @@ import 'package:qorgan_app/data/services/incoming_message_service.dart';
 import 'package:qorgan_app/data/services/protection_settings.dart';
 import 'package:qorgan_app/data/services/message_store.dart';
 import 'package:qorgan_app/domain/inspect_message.dart';
-import 'package:qorgan_app/ui/core/copy.dart';
+
+import 'domain/sms_corpus.dart';
+
 import 'package:qorgan_app/ui/guard/view_models/guard_view_model.dart';
 
 void main() {
@@ -17,7 +19,6 @@ void main() {
       final vm = GuardViewModel(
         repository: ProtectionRepository(),
         incomingMessages: service,
-        sample: AppCopy.phishingText,
       );
       final refresh = vm.refresh();
       await service.started.future;
@@ -35,7 +36,6 @@ void main() {
     final vm = GuardViewModel(
       repository: ProtectionRepository(),
       incomingMessages: UnboundIncomingMessageService(),
-      sample: AppCopy.phishingText,
     );
     await vm.toggle();
     expect(vm.armed, isFalse);
@@ -48,7 +48,6 @@ void main() {
       final vm = GuardViewModel(
         repository: ProtectionRepository(settings: settings),
         incomingMessages: ReadyService(),
-        sample: AppCopy.phishingText,
       );
       await vm.toggle();
       expect(vm.active, isTrue);
@@ -67,7 +66,6 @@ void main() {
       final vm = GuardViewModel(
         repository: ProtectionRepository(settings: FailedSettings()),
         incomingMessages: ReadyService(),
-        sample: AppCopy.phishingText,
       );
       await vm.toggle();
       expect(vm.active, isFalse);
@@ -82,7 +80,6 @@ void main() {
       final vm = GuardViewModel(
         repository: ProtectionRepository(),
         incomingMessages: service,
-        sample: AppCopy.phishingText,
       );
       await vm.toggle();
       service.allowed = false;
@@ -114,7 +111,7 @@ class UpdatingHistory extends UnboundIncomingMessageService {
   void receive() {
     const sms = IncomingSms(
       sender: 'KASPI',
-      body: AppCopy.phishingText,
+      body: corpusPhishingSample,
       timestamp: 1,
     );
     records = [StoredMessage(message: sms, verdict: inspectMessage(sms.body))];

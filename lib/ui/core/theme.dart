@@ -87,11 +87,14 @@ ThemeData qorganTheme() => ThemeData(
       backgroundColor: QorganColors.surface,
       side: const BorderSide(color: QorganColors.line),
       shape: const StadiumBorder(),
-      minimumSize: const Size(48, 44),
+      minimumSize: const Size(48, 48),
     ),
   ),
   textButtonTheme: TextButtonThemeData(
-    style: TextButton.styleFrom(foregroundColor: QorganColors.ink),
+    style: TextButton.styleFrom(
+      foregroundColor: QorganColors.ink,
+      minimumSize: const Size(48, 48),
+    ),
   ),
   inputDecorationTheme: InputDecorationTheme(
     filled: true,

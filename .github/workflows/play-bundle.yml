@@ -1,0 +1,69 @@
+name: Prepare Google Play bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-bundle:
+    runs-on: ubuntu-latest
+    environment: google-play-closed-test
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+      - run: python3 -m unittest discover -s scripts/tests
+      - name: Install Android release toolchain
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+      - name: Build with private upload key (never publishes)
+        shell: bash
+        env:
+          QORGAN_UPLOAD_KEY_BASE64: ${{ secrets.QORGAN_UPLOAD_KEY_BASE64 }}
+          QORGAN_KEYSTORE_PASSWORD: ${{ secrets.QORGAN_KEYSTORE_PASSWORD }}
+          QORGAN_KEY_PASSWORD: ${{ secrets.QORGAN_KEY_PASSWORD }}
+          QORGAN_KEY_ALIAS: ${{ secrets.QORGAN_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          : "${QORGAN_UPLOAD_KEY_BASE64:?Missing upload key}"
+          : "${QORGAN_KEYSTORE_PASSWORD:?Missing keystore password}"
+          : "${QORGAN_KEY_PASSWORD:?Missing key password}"
+          : "${QORGAN_KEY_ALIAS:?Missing key alias}"
+          umask 077
+          signing_file="$(mktemp "$RUNNER_TEMP/qorgan-upload.XXXXXX.jks")"
+          trap 'rm -f -- "$signing_file"' EXIT
+          printf '%s' "$QORGAN_UPLOAD_KEY_BASE64" | base64 --decode > "$signing_file"
+          export QORGAN_KEYSTORE_PATH="$signing_file"
+          python3 scripts/build_play_release.py --apk
+          keytool -exportcert -rfc -keystore "$signing_file" -alias "$QORGAN_KEY_ALIAS" \
+            -storepass:env QORGAN_KEYSTORE_PASSWORD \
+            -file artifacts/play-release/upload-certificate.pem
+      - name: Inspect bundle, permissions, certificate and 16 KB alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 2 https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar -o "$RUNNER_TEMP/bundletool.jar"
+          python3 scripts/inspect_play_release.py \
+            --aab artifacts/play-release/*.aab \
+            --apk artifacts/play-release/*.apk \
+            --bundletool "$RUNNER_TEMP/bundletool.jar"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qorgan-play-release
+          path: artifacts/play-release/
+          if-no-files-found: error
+          retention-days: 14

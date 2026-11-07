@@ -68,6 +68,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/fonts/OFL.txt
+    - assets/blocklist/seed-hosts.txt
   fonts:
     - family: Manrope
       fonts:
