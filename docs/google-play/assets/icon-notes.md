@@ -1,5 +1,9 @@
 # Google Play icon
 
+Listing PNGs and SVG sources are kept locally and excluded from Git. The filenames below describe the submitted assets; they are not files to download from this repository. Keep the original listing media with the local release materials.
+
+Phone screenshots can be regenerated with `flutter test test/mobile_google_play_capture_test.dart`. They are written to this directory and are also ignored by Git.
+
 The owner requested a black background for the existing Qorğan logo on 7 November 2026.
 
 Final listing asset: `store-icon-black.png`, exported at 512×512 from `store-icon-black.svg` with `rsvg-convert`. The SVG differs from `store-icon.svg` only in the background fill (`#FFFFFF` → `#000000`); all original logo paths, transforms, padding and mint fill `#3AD99A` are preserved. The original white assets remain available. This changes the Play listing icon only, not the installed Android launcher icon or UI.

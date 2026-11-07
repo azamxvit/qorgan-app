@@ -24,11 +24,13 @@
 
 Снимки сделаны тестом `mobile_ux_capture_test.dart` с реальными Flutter-виджетами, встроенным Manrope и Material Icons, размером 390×844. Это рендеринг виджетов, а не подтверждение работы на Android-устройстве.
 
-- [Приветствие](../artifacts/qorgan-ux-welcome.png)
-- [Настройка разрешений](../artifacts/qorgan-ux-setup.png)
-- [Главная](../artifacts/qorgan-ux-home.png)
-- [Ручная проверка](../artifacts/qorgan-ux-manual.png)
-- [Результат](../artifacts/qorgan-ux-result.png)
+Снимки хранятся локально и исключены из Git. Чтобы создать их:
+
+```sh
+flutter test test/mobile_ux_capture_test.dart test/launch_test.dart
+```
+
+Превью приветствия, настройки, главной, ручной проверки и результата появятся в `artifacts/qorgan-ux-*.png`; заставка — в `artifacts/qorgan-launch-preview.png`.
 
 Снимок результата использует существующий тестовый SMS-корпус. Пример не включён в код приложения. Превью проверены визуально; отдельные тесты проверяют 320px, 200% системный текст, длинные сообщения и открытие клавиатуры.
 

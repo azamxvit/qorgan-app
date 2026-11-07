@@ -52,6 +52,11 @@ app.*.map.json
 /artifacts/*.aab
 /artifacts/play-release/
 
+# Generated previews and local Google Play listing media.
+/artifacts/*.png
+/docs/google-play/assets/*.png
+/docs/google-play/assets/*.svg
+
 # Signing material must never enter source control, regardless of its folder.
 *.jks
 *.keystore

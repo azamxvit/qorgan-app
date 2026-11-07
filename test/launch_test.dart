@@ -314,8 +314,9 @@ void main() {
     await tester.runAsync(() async {
       final image = await boundary.toImage(pixelRatio: 1);
       final bytes = (await image.toByteData(format: ui.ImageByteFormat.png))!;
-      await File('artifacts/qorgan-launch-preview.png')
-          .writeAsBytes(bytes.buffer.asUint8List());
+      final output = File('artifacts/qorgan-launch-preview.png');
+      await output.parent.create(recursive: true);
+      await output.writeAsBytes(bytes.buffer.asUint8List());
       image.dispose();
     });
     await tester.pumpAndSettle();
